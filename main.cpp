@@ -3,8 +3,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h> //inet_addr
+#include <sstream>
+#include <iostream>
 
 #define MAX 80
+#define DEFAULT_PORT 8089
 
 // Function designed for chat between client and server.
 void func(int sockfd)
@@ -18,7 +21,7 @@ void func(int sockfd)
         // read the message from client and copy it in buffer
         read(sockfd, buff, sizeof(buff));
         // print buffer which contains the client contents
-        printf("From client: %s\t To client : ", buff);
+        std::cout << "From client: " << buff << std::endl;
 
         // and send back that message to the client
         write(sockfd, buff, sizeof(buff));
@@ -31,16 +34,28 @@ void func(int sockfd)
     }
 }
 
-int main()
+int main(int argc, char** argv)
 {
     int socket_desc , new_socket , c;
     struct sockaddr_in server , client;
-    unsigned int port = 8089;
+    unsigned int port = DEFAULT_PORT;
+
+    std::cout << "starting the echo socket server..." << std::endl;
+    if(argc > 1)
+	{
+	    std::istringstream ss(argv[1]);
+	    if (!(ss >> port))
+		{
+		    std::cerr << "Could not parse the port argument" << std::endl;
+		    return -1;
+		}
+	}
+
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
-        printf("Could not create socket");
+        std::cerr << "Could not create socket";
     }
 
     //Prepare the sockaddr_in structure
@@ -51,23 +66,24 @@ int main()
     //Bind
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
-        puts("bind failed");
+        std::cout << "bind failed, port may already be in use." << std::endl;
+	return -1;
     }
-    puts("bind done");
+    std::cout << "bind done on port " << port << std::endl;
 
     //Listen
     listen(socket_desc , 3);
 
     //Accept and incoming connection
-    puts("Waiting for incoming connections...");
+    std::cout << "Waiting for incoming connections " << std::endl;
     c = sizeof(struct sockaddr_in);
     new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
     if (new_socket<0)
     {
-        perror("accept failed");
+        std::cerr << "accept failed" << std::endl;
     }
 
-    puts("Connection accepted");
+    std::cout << "Connection accepted" << std::endl;
     func(new_socket);
 
     return 0;
